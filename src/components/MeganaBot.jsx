@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
+import emailjs from '@emailjs/browser'
 import styles from './MeganaBot.module.css'
+
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+const EMAILJS_CONFIGURED = Boolean(
+  EMAILJS_SERVICE_ID && EMAILJS_TEMPLATE_ID && EMAILJS_PUBLIC_KEY,
+)
 
 const SYSTEM_PROMPT = `You are "ask megana" — a warm, casual, witty AI assistant that lives on Megana Madhurakavi's personal website. You answer questions about Megana in her voice: friendly, a little playful, humble but confident. Keep answers concise and conversational — like texting, not a Wikipedia entry.
 
@@ -34,13 +42,34 @@ PERSONALITY / FUN FACTS:
 - Open to internships and collaboration opportunities
 
 RULES:
-- If asked something personal, weird, or that you don't know → respond with something like: "hmm, i'm not totally sure about that one! want me to send Megana a message directly?" then set needs_email: true in your response.
 - Stay in character — warm, casual, lowercase-leaning, a little witty
 - Never make up facts about Megana
 - If asked if you're AI: be honest but playful ("yep! i'm megana's little digital helper 😄")
-- Keep responses under 100 words unless the question really warrants more
+- Keep responses under 80 words unless the question really warrants more
 
-RESPONSE FORMAT: Always respond as plain conversational text. Do not use markdown headers or bullet points.`
+ESCALATION FLOW — when the user asks something you don't know, asks something personal/weird, or explicitly wants to reach Megana:
+Walk them through these steps ONE AT A TIME — never ask for multiple things at once. Use your own warm, casual voice for each step:
+
+  Step 1 — Offer: gently say you're not sure but you can pass along a note to Megana. Ask if they'd like that.
+  Step 2 — Name: once they agree, ask what their name is.
+  Step 3 — Email: once you have their name, ask for the best email for Megana to reach them at.
+  Step 4 — Confirm + draft: once you have a valid-looking email (must contain @), summarize what they wanted to ask in one or two clear sentences (synthesized from the whole conversation, not a copy of their last message) and tell them they'll see the draft below and can hit send when ready. THIS is the only step where you include the "draft" field in your JSON.
+
+Escalation rules:
+- If at any point they want to abort or change topic, just go back to normal chat with draft: null.
+- If they give an obviously invalid email (no @, looks like gibberish), ask once more politely.
+- Never include the draft field until you have a name, a valid-looking email, AND a clear message.
+- After they've sent (you'll see a tool/system note), don't keep nagging — just continue chatting.
+
+RESPONSE FORMAT — ALWAYS respond with valid JSON in this exact shape:
+{
+  "reply": "your conversational message to the user, plain text, in your usual voice",
+  "draft": null | { "name": "their name", "email": "their email", "message": "a clean 1-2 sentence synthesis of what they want to ask megana" }
+}
+
+- "reply" is always a string, always present, no markdown or bullet points.
+- "draft" is null on every single turn EXCEPT step 4 above.
+- When draft is non-null, your reply should be something brief like "perfect, you'll see the draft below — hit send whenever you're ready 💌"`
 
 const INITIAL_MESSAGE = {
   role: 'assistant',
@@ -54,6 +83,7 @@ export default function MeganaBot() {
   const [loading, setLoading] = useState(false)
   const [emailDraft, setEmailDraft] = useState(null)
   const [emailSent, setEmailSent] = useState(false)
+  const [sending, setSending] = useState(false)
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -91,18 +121,11 @@ export default function MeganaBot() {
       }
       const reply = data.reply || "hmm, something went wrong on my end! try again?"
 
-      const needsEmail = reply.toLowerCase().includes('send megana a message') ||
-        reply.toLowerCase().includes('shoot megana') ||
-        reply.toLowerCase().includes('email megana')
-
       setMessages(prev => [...prev, { role: 'assistant', content: reply }])
 
-      if (needsEmail) {
-        setEmailDraft({
-          to: 'mmadhurakavi@college.harvard.edu',
-          subject: 'Question from your website',
-          body: `Hi Megana,\n\nI visited your website and wanted to ask:\n\n"${text}"\n\nLooking forward to hearing from you!`,
-        })
+      // The bot only includes a draft once it's gathered name + email + message.
+      if (data.draft && data.draft.name && data.draft.email && data.draft.message) {
+        setEmailDraft(data.draft)
       }
     } catch (err) {
       console.error('[ask megana] network error:', err)
@@ -116,13 +139,54 @@ export default function MeganaBot() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
 
-  const sendEmail = () => {
-    if (!emailDraft) return
-    const mailto = `mailto:${emailDraft.to}?subject=${encodeURIComponent(emailDraft.subject)}&body=${encodeURIComponent(emailDraft.body)}`
-    window.open(mailto)
-    setEmailSent(true)
-    setEmailDraft(null)
-    setMessages(prev => [...prev, { role: 'assistant', content: "sent! megana will get back to you soon 💌" }])
+  const sendEmail = async () => {
+    if (!emailDraft || sending) return
+
+    // Fallback: if EmailJS isn't configured yet, open the visitor's email app
+    // with a pre-filled draft. They have to manually hit send — not ideal,
+    // but at least the bot is honest about what happened.
+    if (!EMAILJS_CONFIGURED) {
+      const subject = `Message from ${emailDraft.name} via your website`
+      const body = `From: ${emailDraft.name} <${emailDraft.email}>\n\n${emailDraft.message}`
+      const mailto = `mailto:mmadhurakavi@college.harvard.edu?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+      window.open(mailto)
+      setEmailDraft(null)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "opened your email app — hit send from there and it'll reach megana 📨",
+      }])
+      return
+    }
+
+    setSending(true)
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          from_name: emailDraft.name,
+          from_email: emailDraft.email,
+          reply_to: emailDraft.email,
+          subject: `Message from ${emailDraft.name} via your website`,
+          message: emailDraft.message,
+        },
+        { publicKey: EMAILJS_PUBLIC_KEY },
+      )
+      setEmailSent(true)
+      setEmailDraft(null)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "sent! megana will get back to you soon 💌",
+      }])
+    } catch (err) {
+      console.error('[ask megana] emailjs error:', err)
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "oh no, couldn't send that 😔 you can email megana directly at mmadhurakavi@college.harvard.edu",
+      }])
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -157,13 +221,17 @@ export default function MeganaBot() {
           )}
           {emailDraft && !emailSent && (
             <div className={styles.emailDraft}>
-              <div className={styles.draftLabel}>draft email</div>
-              <div className={styles.draftField}><span>to:</span> {emailDraft.to}</div>
-              <div className={styles.draftField}><span>subject:</span> {emailDraft.subject}</div>
-              <div className={styles.draftBody}>{emailDraft.body}</div>
+              <div className={styles.draftLabel}>draft to megana</div>
+              <div className={styles.draftField}><span>from:</span> {emailDraft.name}</div>
+              <div className={styles.draftField}><span>email:</span> {emailDraft.email}</div>
+              <div className={styles.draftBody}>{emailDraft.message}</div>
               <div className={styles.draftActions}>
-                <button className={styles.sendBtn} onClick={sendEmail}>send it ✉</button>
-                <button className={styles.skipBtn} onClick={() => setEmailDraft(null)}>nevermind</button>
+                <button className={styles.sendBtn} onClick={sendEmail} disabled={sending}>
+                  {sending ? 'sending...' : 'send it ✉'}
+                </button>
+                <button className={styles.skipBtn} onClick={() => setEmailDraft(null)} disabled={sending}>
+                  nevermind
+                </button>
               </div>
             </div>
           )}

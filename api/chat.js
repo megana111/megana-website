@@ -33,6 +33,9 @@ export default async function handler(req, res) {
     const payload = {
       model: 'gpt-4o-mini',
       max_tokens: 1000,
+      // JSON mode — model is forced to return parseable JSON matching the
+      // shape described in the system prompt ({ reply, draft }).
+      response_format: { type: 'json_object' },
       messages: [
         ...(system ? [{ role: 'system', content: system }] : []),
         ...messages.map(m => ({ role: m.role, content: m.content })),
@@ -58,8 +61,27 @@ export default async function handler(req, res) {
       return
     }
 
-    const reply = data.choices?.[0]?.message?.content || ''
-    res.status(200).json({ reply })
+    const raw = data.choices?.[0]?.message?.content || '{}'
+    let parsed
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      // Defensive fallback: if the model somehow returned non-JSON, treat
+      // the whole thing as the reply and continue.
+      parsed = { reply: raw, draft: null }
+    }
+
+    const reply = typeof parsed.reply === 'string' ? parsed.reply : ''
+    const draft =
+      parsed.draft && typeof parsed.draft === 'object'
+        ? {
+            name: String(parsed.draft.name || '').trim(),
+            email: String(parsed.draft.email || '').trim(),
+            message: String(parsed.draft.message || '').trim(),
+          }
+        : null
+
+    res.status(200).json({ reply, draft })
   } catch (err) {
     res.status(500).json({ error: err?.message || 'Unknown error' })
   }
