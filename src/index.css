@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+:root {
+  --pastel-blue: #A8C8E8;
+  --pastel-blue-light: #E4F0F9;
+  --pastel-blue-mid: #6AAED6;
+  --pastel-blue-dark: #3a7ab0;
+  --white: #ffffff;
+  --off-white: #FAFAFA;
+  --gray-100: #F5F5F5;
+  --gray-200: #E8E8E8;
+  --gray-400: #ABABAB;
+  --gray-600: #717171;
+  --gray-900: #1A1A1A;
+  --font-display: 'DM Serif Display', serif;
+  --font-body: 'DM Sans', sans-serif;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="dark"] {
+  --white: #111111;
+  --off-white: #161616;
+  --gray-100: #1e1e1e;
+  --gray-200: #2a2a2a;
+  --gray-400: #555555;
+  --gray-600: #999999;
+  --gray-900: #F0F0F0;
+  --pastel-blue-light: #1a2d3d;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--white);
+  color: var(--gray-900);
+  transition: background 0.3s, color 0.3s;
+  overflow-x: hidden;
+  cursor: none;
+}
+a { color: inherit; text-decoration: none; }
+::selection { background: var(--pastel-blue); color: var(--gray-900); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }

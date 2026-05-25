@@ -1,0 +1,92 @@
+.section { padding: 6rem 3rem; background: var(--off-white); }
+.inner { max-width: 700px; margin: 0 auto; }
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 3rem;
+  border-bottom: 0.5px solid var(--gray-200);
+  padding-bottom: 1rem;
+}
+
+.sectionLabel { font-size: 0.75rem; color: var(--gray-400); letter-spacing: 0.1em; }
+
+.title {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 400;
+  color: var(--gray-900);
+}
+
+.timeline { position: relative; padding-left: 2rem; }
+
+.line {
+  position: absolute;
+  left: 0;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: var(--gray-200);
+}
+
+.item {
+  position: relative;
+  padding: 0 0 2.5rem 2rem;
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.revealed { opacity: 1; transform: translateX(0); }
+
+.dot {
+  position: absolute;
+  left: -4px;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--pastel-blue);
+  border: 2px solid var(--white);
+  box-shadow: 0 0 0 1px var(--pastel-blue);
+  transition: transform 0.2s;
+}
+
+.item:hover .dot { transform: scale(1.4); }
+
+.year {
+  font-size: 0.72rem;
+  color: var(--gray-400);
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+
+.card {
+  background: var(--white);
+  border: 0.5px solid var(--gray-200);
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.item:hover .card {
+  border-color: var(--pastel-blue);
+  box-shadow: 0 0 0 3px var(--pastel-blue-light);
+}
+
+.honorTitle {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--gray-900);
+  margin-bottom: 4px;
+}
+
+.honorDetail {
+  font-size: 0.82rem;
+  color: var(--gray-600);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .section { padding: 4rem 1.25rem; }
+}
