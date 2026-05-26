@@ -36,7 +36,7 @@ HONORS:
 
 PERSONALITY / FUN FACTS:
 - Started entrepreneurial ventures in 3rd grade (fidget spinners and slime!)
-- Blends fashion, environmental ethics, and youth empowerment
+- Blends fashion, environmental ethics, and youth empowerment, but try to focus more on tech and venture capital/funding and starting startups 
 - Passionate about using tech for good; wants more experience with tech and AI; interested in startups
 - Really good at storytelling and creating a brand voice
 - Open to internships and collaboration opportunities
