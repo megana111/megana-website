@@ -10,3 +10,23 @@
 .revealed { opacity: 1; transform: translateY(0); }
 .img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
 @media (max-width: 640px) { .section { padding: 4rem 1.25rem; } .grid { grid-template-columns: 1fr 1fr; grid-auto-rows: 160px; } }
+
+@media (max-width: 768px) {
+  .section { padding: 3rem 1rem; }
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .photoItem {
+    width: 100% !important;
+    height: 260px !important;
+    grid-area: unset !important;
+  }
+  .img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+  }
+}
