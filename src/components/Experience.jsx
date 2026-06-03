@@ -31,7 +31,7 @@ const experiences = [
   },
   {
     num: '04',
-    title: 'CITYarts, Inc.',
+    title: 'Intern @ CITYarts, Inc.',
     tagline: 'Finance & PR · NYC public art nonprofit',
     tag: 'Finance',
     back: 'NYC nonprofit creating public art in underserved communities. Supported finance operations and public relations strategy.',
